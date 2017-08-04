@@ -72,16 +72,23 @@ function spb_explode() = EXPLODE;
 //===================================================================================
 // Main inputs to set the size of the box.
 
-// The inner dimensions from wall to wall.
-// Note that this is the amount of usable space inside the box,
-// EXCEPT for the posts in the corners.
-// BOX_INNER_DIMS = [40, 40, 40];  // probably about a minimum workable size.
-BOX_INNER_DIMS = [132, 90, 64.5];
-function spb_boxInnerDims() = BOX_INNER_DIMS;
-
 // The thickness of the outer walls, as well as the slots.
 PANEL_THICK = 3;  // 3 is strong with PLA, 2 is workable.
 function spb_panelThick() = PANEL_THICK;
+
+// Some derived dimensions for the corner posts, in case you need to reference them in the inner dimensions.
+CORNER_POST_D = PANEL_THICK * 5.5;
+function spb_cornerPostD() = CORNER_POST_D;
+CORNER_POST_OUT = PANEL_THICK * 1.5;
+CORNER_POST_R = CORNER_POST_D / 2;
+
+// The inner dimensions from wall to wall.
+// Note that this is the amount of usable space inside the box,
+// EXCEPT for the posts in the corners.
+// If you need to allow for those, add in CORNER_POST_D on each dimension per side.
+// BOX_INNER_DIMS = [40, 40, 40];  // probably about a minimum workable size.
+BOX_INNER_DIMS = [132, 90, 64.5];
+function spb_boxInnerDims() = BOX_INNER_DIMS;
 
 // Radius of the rounded corners.
 BOX_RADIUS = 4;
@@ -94,14 +101,12 @@ BOX_DX = PANEL_THICK + BOX_INNER_DIMS[0] + PANEL_THICK;
 BOX_DY = PANEL_THICK + BOX_INNER_DIMS[1] + PANEL_THICK;
 BOX_DZ = PANEL_THICK + BOX_INNER_DIMS[2] + PANEL_THICK;
 
-CORNER_POST_D = PANEL_THICK * 5.5;
-function spb_cornerPostD() = CORNER_POST_D;
-CORNER_POST_OUT = PANEL_THICK * 1.5;
-CORNER_POST_R = CORNER_POST_D / 2;
+function spb_boxOuterDims() = [BOX_DX, BOX_DY, BOX_DZ];
 
 PANEL_THICK_ALLOW = SLIDE_FIT + PANEL_THICK;
 POST_TRIM = CORNER_POST_R - PANEL_THICK_ALLOW - PANEL_THICK;
 CHANNEL_D = 2 * PANEL_THICK;  // overlap for the channels to grip the slides
+function spb_channel_d() = CHANNEL_D / 2;  // export it - but what you usually want to know is the depth from the edge
 PANEL_BITE = CORNER_POST_D + CORNER_POST_OUT - CHANNEL_D;
 
 PIN_LENGTH = 13;

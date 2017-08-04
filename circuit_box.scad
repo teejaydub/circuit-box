@@ -125,9 +125,10 @@ CORNER_INSET = spb_panelThick();
 // Generates a Sliding Panel Box-compatible bottom frame
 // with mounting posts for a PCB at the given distances from one another.
 // They're centered in X-Y, but with the given translation (tx, ty).
+// If either X or Y is omitted, only two mounting posts are generated.
 // If 'balcony' is specified, it's the height above the top of the mounting posts
 // at which to put the bottom of a second panel, which will have supports on this frame.
-module pcb_bottomFrame(dx, dy, tx=0, ty=0, balcony=0) {
+module pcb_bottomFrame(dx=0, dy=0, tx=0, ty=0, balcony=0) {
   union() {
     spb_bottomFrame();
     moveDown(EPSILON)
