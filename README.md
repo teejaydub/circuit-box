@@ -5,6 +5,9 @@ Requires [tjw-scad](https://github.com/teejaydub/tjw-scad) in a subdirectory.
 
 ## Usage
 
+Clone a new copy of this project for each box you want to make - you'll need to
+modify a bunch of things in-place.
+
 Customize `final_box.scad`.  Then run `build.bat` to generate STL files,
 or `clean.bat` to remove them all.
 
