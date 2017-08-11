@@ -73,25 +73,47 @@ function spb_explode() = EXPLODE;
 // Main inputs to set the size of the box.
 
 // The thickness of the outer walls, as well as the slots.
-PANEL_THICK = 3;  // 3 is strong with PLA, 2 is workable.
+PANEL_THICK = 2;  // 3 is strong with PLA, 2 is workable.
 function spb_panelThick() = PANEL_THICK;
 
-// Some derived dimensions for the corner posts, in case you need to reference them in the inner dimensions.
-CORNER_POST_D = PANEL_THICK * 5.5;
-function spb_cornerPostD() = CORNER_POST_D;
-CORNER_POST_OUT = PANEL_THICK * 1.5;
-CORNER_POST_R = CORNER_POST_D / 2;
+// These shouldn't need to be changed; they're also here to allow derived measurements.
+PIN_LENGTH = 12;
+PIN_THICK = 1.3;
+PIN_CLEARANCE = 0.35;
+PIN_HOUSING_DZ = PIN_LENGTH;
+PIN_HOUSING_D = 10;  // diameter of a post that can solidly hold a pin socket
+function spb_pin_housing_d() = PIN_HOUSING_D;
+PIN_HOUSING_OFFSET = PIN_HOUSING_D/2;
 
 // The inner dimensions from wall to wall.
 // Note that this is the amount of usable space inside the box,
 // EXCEPT for the posts in the corners.
-// If you need to allow for those, add in CORNER_POST_D on each dimension per side.
+// If you need to allow for those, add in PIN_HOUSING_D on each dimension per side.
 // BOX_INNER_DIMS = [40, 40, 40];  // probably about a minimum workable size.
-BOX_INNER_DIMS = [132, 90, 64.5];
+// BOX_INNER_DIMS = [40 + 2 * PIN_HOUSING_D, 40 + 2 * PIN_HOUSING_D, 40]  // if you have a rectangular board 40 x 40 mm
+BOX_INNER_DIMS = [
+  83 + 2 * PIN_HOUSING_D, 
+  54, 
+  24
+];
 function spb_boxInnerDims() = BOX_INNER_DIMS;
 
 // Radius of the rounded corners.
 BOX_RADIUS = 4;
+
+
+//===================================================================================
+// Centralize the creation of attachment pins and holes.
+
+module spb_pinpeg() {
+  pinpeg(l=PIN_LENGTH, t=PIN_THICK, space=PIN_CLEARANCE, flat=1);
+}
+
+module spb_pinhole() {
+  // I had tried fixed=true on early models, but they don't really provide anything important,
+  // and it's easier to get pins in and out if they can spin.
+  pinhole(l=PIN_LENGTH);
+}
 
 
 //===================================================================================
@@ -103,16 +125,17 @@ BOX_DZ = PANEL_THICK + BOX_INNER_DIMS[2] + PANEL_THICK;
 
 function spb_boxOuterDims() = [BOX_DX, BOX_DY, BOX_DZ];
 
+// Some derived dimensions for the corner posts, in case you need to reference them in the inner dimensions.
+CORNER_POST_D = PANEL_THICK * 5.5;
+function spb_cornerPostD() = CORNER_POST_D;
+CORNER_POST_OUT = PANEL_THICK * 1.5;
+CORNER_POST_R = CORNER_POST_D / 2;
+
 PANEL_THICK_ALLOW = SLIDE_FIT + PANEL_THICK;
 POST_TRIM = CORNER_POST_R - PANEL_THICK_ALLOW - PANEL_THICK;
 CHANNEL_D = 2 * PANEL_THICK;  // overlap for the channels to grip the slides
 function spb_channel_d() = CHANNEL_D / 2;  // export it - but what you usually want to know is the depth from the edge
 PANEL_BITE = CORNER_POST_D + CORNER_POST_OUT - CHANNEL_D;
-
-PIN_LENGTH = 13;
-PIN_HOUSING_DZ = PIN_LENGTH + 2;
-PIN_HOUSING_D = 10;  // diameter of a post that can solidly hold a pin socket
-PIN_HOUSING_OFFSET = PIN_HOUSING_D/2;
 
 // Bottom and most of the frame, modeled centered in X and Y, with its bottom at Z=0.
 // If extendZ is specified, enlarge the frame by that much in Z - to make up for the panels
@@ -124,83 +147,93 @@ module spb_frame(boxDz0 = BOX_DZ, extendZ=0) {
   adjustZ = 1;  // don't know why!
   panelZ = extendZ - 1;
 
-  difference() {
-    union() {
-      // Bottom
-      cubeOnFloor([BOX_DX, BOX_DY, PANEL_THICK]);
+  // Check to see if there's room for the pins.
+  if (BOX_INNER_DIMS[2] < 2 * PIN_HOUSING_DZ) {
+    echo("Not enough room for the pins - may need to experiment with a shorter pin?");
+    echo("Or increase BOX_INNER_DIMS[2] by: ", 2 * PIN_HOUSING_DZ - BOX_INNER_DIMS[2]);
+    echo(BOX_INNER_DIMS=BOX_INNER_DIMS, PIN_HOUSING_DZ=PIN_HOUSING_DZ);
+    echo("");
+  } else {
+    echo("");
+    echo("Headroom for pins = ", BOX_INNER_DIMS[2] - 2 * PIN_HOUSING_DZ);
 
-      // Corner posts
-      twin_xy() {
-        translate([
-          BOX_DX / 2 - CORNER_POST_R + CORNER_POST_OUT, 
-          BOX_DY / 2 - CORNER_POST_R + CORNER_POST_OUT 
-        ]) {
-          intersection() {
-            difference() {
-              cylinder(d=CORNER_POST_D, h=boxDz + PANEL_THICK, $fn=40);
+    difference() {
+      union() {
+        // Bottom
+        cubeOnFloor([BOX_DX, BOX_DY, PANEL_THICK]);
 
-              translate([-PIN_HOUSING_OFFSET, -PIN_HOUSING_OFFSET])
-                union() {
-                  // Omit what overlaps the lower pin housing.
-                  moveUp(PANEL_THICK + pinReceiveHeight - PIN_HOUSING_DZ)
-                    cylinder(d=PIN_HOUSING_D, h=2*PIN_HOUSING_DZ + 2*PANEL_THICK + extendZ);
-
-                  // Omit detached crumbs that don't add strength, for PANEL_THICK >= 3.
-                  translate([POST_TRIM - PANEL_THICK/2, CORNER_POST_R])
-                    turnAround()
-                      cube([CORNER_POST_D, CORNER_POST_D, boxDz + 2*PANEL_THICK]);
-                  translate([CORNER_POST_R, POST_TRIM - PANEL_THICK/2])
-                    turnAround()
-                      cube([CORNER_POST_D, CORNER_POST_D, boxDz + 2*PANEL_THICK]);
-                }
-            }
-
-            // Trim the outside to what's needed for strength and looks.
-            translate([-CORNER_POST_D * 1.5 - POST_TRIM, -CORNER_POST_D * 1.5 - POST_TRIM, 0])
-              cube([2*CORNER_POST_D, 2*CORNER_POST_D, boxDz + 2*PANEL_THICK]);
-          }
-
-          // The column that supports and contains the pin hole,
-          // which recieves the pin attaching the top.
-          translate([-PIN_HOUSING_OFFSET, -PIN_HOUSING_OFFSET, PANEL_THICK])
+        // Corner posts
+        twin_xy() {
+          translate([
+            BOX_DX / 2 - CORNER_POST_R + CORNER_POST_OUT, 
+            BOX_DY / 2 - CORNER_POST_R + CORNER_POST_OUT 
+          ]) {
             intersection() {
               difference() {
-                // The post itself.
-                filletedCylinder(h=pinReceiveHeight, d=PIN_HOUSING_D);
+                cylinder(d=CORNER_POST_D, h=boxDz + PANEL_THICK, $fn=40);
 
-                // The hole to receive the pin.
-                spin(-45)
-                  moveUp(pinReceiveHeight + EPSILON)
-                    invert()
-                      pinhole(fixed=true);
+                translate([-PIN_HOUSING_OFFSET, -PIN_HOUSING_OFFSET])
+                  union() {
+                    // Omit what overlaps the lower pin housing.
+                    moveUp(PANEL_THICK + pinReceiveHeight - PIN_HOUSING_DZ)
+                      cylinder(d=PIN_HOUSING_D, h=2*PIN_HOUSING_DZ + 2*PANEL_THICK + extendZ);
+
+                    // Omit detached crumbs that don't add strength, for PANEL_THICK >= 3.
+                    translate([POST_TRIM - PANEL_THICK/2, CORNER_POST_R])
+                      turnAround()
+                        cube([CORNER_POST_D, CORNER_POST_D, boxDz + 2*PANEL_THICK]);
+                    translate([CORNER_POST_R, POST_TRIM - PANEL_THICK/2])
+                      turnAround()
+                        cube([CORNER_POST_D, CORNER_POST_D, boxDz + 2*PANEL_THICK]);
+                  }
               }
-              // Cut off the portion of the fillet that would collide with the walls.
-              translate([-PIN_HOUSING_D/2, -PIN_HOUSING_D/2])
-                cubeOnFloor([2*PIN_HOUSING_D, 2*PIN_HOUSING_D, boxDz]);
+
+              // Trim the outside to what's needed for strength and looks.
+              translate([-CORNER_POST_D * 1.5 - POST_TRIM, -CORNER_POST_D * 1.5 - POST_TRIM, 0])
+                cube([2*CORNER_POST_D, 2*CORNER_POST_D, boxDz + 2*PANEL_THICK]);
             }
+
+            // The column that supports and contains the pin hole,
+            // which recieves the pin attaching the top.
+            translate([-PIN_HOUSING_OFFSET, -PIN_HOUSING_OFFSET, PANEL_THICK])
+              intersection() {
+                difference() {
+                  // The post itself.
+                  filletedCylinder(h=pinReceiveHeight, d=PIN_HOUSING_D);
+
+                  // The hole to receive the pin.
+                  spin(-45)
+                    moveUp(pinReceiveHeight + EPSILON)
+                      invert()
+                        spb_pinhole(fixed=true);
+                }
+                // Cut off the portion of the fillet that would collide with the walls.
+                translate([-PIN_HOUSING_D/2, -PIN_HOUSING_D/2])
+                  cubeOnFloor([2*PIN_HOUSING_D, 2*PIN_HOUSING_D, boxDz]);
+              }
+          }
         }
+
+        // Pads to stiffen where the panels meet the bottom
+        moveUp((CHANNEL_D + panelZ)/2 - EPSILON)
+          round_frame([BOX_DX - SLIDE_FIT / 2 + 2*PANEL_THICK, 
+            BOX_DY - SLIDE_FIT / 2 + 2*PANEL_THICK, 
+            CHANNEL_D + panelZ],
+            [PANEL_THICK_ALLOW + 2*PANEL_THICK - 2*EPSILON, 
+            PANEL_THICK_ALLOW + 2*PANEL_THICK - 2*EPSILON, 0], CORNER_POST_R / 2);
       }
 
-      // Pads to stiffen where the panels meet the bottom
-
-      moveUp((CHANNEL_D + panelZ)/2 - EPSILON)
-        round_frame([BOX_DX - SLIDE_FIT / 2 + 2*PANEL_THICK, 
-          BOX_DY - SLIDE_FIT / 2 + 2*PANEL_THICK, 
-          CHANNEL_D + panelZ],
-          [PANEL_THICK_ALLOW + 2*PANEL_THICK - 2*EPSILON, 
-          PANEL_THICK_ALLOW + 2*PANEL_THICK - 2*EPSILON, 0], CORNER_POST_R / 2);
-    }
-
-    // Slots for side panels:
-    // Left and right panels.
-    twin_x() {
-      translate([-BOX_DX / 2, -(BOX_DY - PANEL_BITE) / 2, PANEL_THICK + panelZ])
-        cube([PANEL_THICK_ALLOW + EPSILON, BOX_DY - PANEL_BITE, BOX_DZ + EPSILON]);
-    }
-    // Front and back panels.
-    twin_y() {
-      translate([-(BOX_DX - PANEL_BITE) / 2, -BOX_DY / 2, PANEL_THICK + panelZ])
-        cube([BOX_DX - PANEL_BITE, PANEL_THICK_ALLOW + EPSILON, BOX_DZ + EPSILON]);
+      // Slots for side panels:
+      // Left and right panels.
+      twin_x() {
+        translate([-BOX_DX / 2, -(BOX_DY - PANEL_BITE) / 2, PANEL_THICK + panelZ])
+          cube([PANEL_THICK_ALLOW + EPSILON, BOX_DY - PANEL_BITE, BOX_DZ + EPSILON]);
+      }
+      // Front and back panels.
+      twin_y() {
+        translate([-(BOX_DX - PANEL_BITE) / 2, -BOX_DY / 2, PANEL_THICK + panelZ])
+          cube([BOX_DX - PANEL_BITE, PANEL_THICK_ALLOW + EPSILON, BOX_DZ + EPSILON]);
+      }
     }
   }
 }
@@ -408,7 +441,7 @@ module spb_assembly(explode=EXPLODE) {
       spin(-45)
         rotate([90, 0, 0])
           moveDown(2)
-            pinpeg();
+            spb_pinpeg();
 
   // Top
   color([0, 1, 1, 0.6])
@@ -450,7 +483,7 @@ else if (RENDER == RENDER_TOP_TEST) {
   moveRight(50) {
     duplicate(2, 25)
       spin(45)
-        pinpeg();
+        spb_pinpeg();
   }
 } else if (RENDER == RENDER_TOP)
   spb_print_topFrame()
@@ -461,7 +494,7 @@ else if (RENDER == RENDER_FRONT)
 else if (RENDER == RENDER_PINS)
   duplicate(4, 30)
     spin(45)
-      pinpeg();
+      spb_pinpeg();
 else if (RENDER == RENDER_PRINT_ALL) {
   arrange(max(BOX_DX, BOX_DY) + 20) {
     spb_print_bottomFrame()
@@ -478,7 +511,7 @@ else if (RENDER == RENDER_PRINT_ALL) {
       spb_rightPanel();
     duplicate(4, 25)
       spin(45)
-        pinpeg();
+        spb_pinpeg();
   }
 }
 else {

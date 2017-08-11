@@ -6,12 +6,14 @@ use <tjw-scad/arrange.scad>;
 use <tjw-scad/moves.scad>;
 use <tjw-scad/primitives.scad>;
 
+function mountingEarDx(hole_d=4) = 4 * hole_d;
+
 // A flat mounting ear, filleted into the wall.
 // Dimensions are based on the size of the mounting hole and the height (h).
 // Modeled in +Y with the floor at Z=0 and the wall it should sit against at Y = 0.
 module mountingEar(hole_d=4, h=4.5) {
-  MOUNTING_EAR_DX = 4 * hole_d;
-  MOUNTING_EAR_DY = 4 * hole_d;
+  MOUNTING_EAR_DX = mountingEarDx();
+  MOUNTING_EAR_DY = mountingEarDx();
   MOUNTING_EAR_DZ = h;
 
   moveBack(MOUNTING_EAR_DY / 2)

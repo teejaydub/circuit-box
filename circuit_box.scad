@@ -33,7 +33,7 @@ MOUNTING_SCREW_HEAD_H = 1.9;  // pan head
 // For holes where a screw needs to slip freely.
 MOUNTING_SCREW_SLIP_D = 3.3;
 
-MOUNTING_POST_H = 8 + EPSILON;
+MOUNTING_POST_H = 6 + EPSILON;
 function pcb_default_mountingPostH() = MOUNTING_POST_H;
 STIFF_WIDTH = 1.5;
 

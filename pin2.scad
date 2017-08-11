@@ -76,6 +76,6 @@ intersection(){
 
 module pinpeg(r=3.5,l=13,d=2.4,nub=0.4,t=1.8,space=0.3)
 union(){
-	pin(r=r,l=l,d=d,nub=nub,t=t,space=space,flat=1);
-	mirror([0,1,0])pin(r=r,l=l,d=d,nub=nub,t=t,space=space,flat=1);
+	pin(r=r,l=l,d=d,nub=nub,t=t,space=space,flat=1, slot=8);
+	mirror([0,1,0])pin(r=r,l=l,d=d,nub=nub,t=t,space=space,flat=1, slot=8);
 }
