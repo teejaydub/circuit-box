@@ -1,6 +1,7 @@
-/* Sampel enclosure, for an Adafruit Perma-Proto 1/2-size board.
+/* Sample enclosure, for an Adafruit Perma-Proto 1/2-size board.
   Also illustrates how to add panel-mounted components to the sides,
   by fitting an RJ11 jack on the left panel.
+  To do: Length the mounting posts slightly, because the screws I have are bottoming out.
 */
 
 include <tjw-scad/dfm.scad>;
@@ -45,13 +46,25 @@ BOX_DZ = spb_sidePanel_dims()[1];
 //===================================================================================
 // Bottom frame, to hold the power board and hold the side panels.
 
+// Perma-Proto half:
 MOUNTING_POST_DX = 2.9 * inch;
+MOUNTING_POST_DY = 0 * inch;
+// Perma-Proto quarter:
+// MOUNTING_POST_DX = 1.4 * inch;
+// MOUNTING_POST_DY = 0 * inch;
+// Radio Shack 276-159B proto board
+// MOUNTING_POST_DX = 35;
+// MOUNTING_POST_DY = 35;
+// Huzzah:
+// MOUNTING_POST_DX = 0.8 * inch;
+// MOUNTING_POST_DY = 1.3 * inch;
+
 EAR_NUDGE = 0.5;  // bigger pushes the ears further into the sides of the frame
 
 // Main frame, modeled centered in X and Y, with its bottom at Z=0.
 module bottom() {
   union() {
-    pcb_bottomFrame(MOUNTING_POST_DX);
+    pcb_bottomFrame(MOUNTING_POST_DX, MOUNTING_POST_DY);
     corners([
       spb_boxOuterDims()[0] - 2 * (mountingEarDx() / 2 + spb_cornerPostD()),
       spb_boxOuterDims()[1] + 2 * (PANEL_THICK - SLIDE_FIT - EPSILON) - 2 * EAR_NUDGE,
@@ -178,7 +191,7 @@ else if (RENDER == RENDER_BACK_TEST) {
   }
 } else if (RENDER == RENDER_EXTRAS) {
   // pins
-  duplicate(4, 25)  // one at a time is easier though
+  duplicate(4, 25)
     spin(45)
       spb_pinpeg();
 } else {
